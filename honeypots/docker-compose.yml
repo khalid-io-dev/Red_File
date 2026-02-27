@@ -1,0 +1,49 @@
+# Honeypot Docker Compose Setup
+
+services:
+  # Cowrie - SSH/Telnet Honeypot
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: securesight_cowrie
+    hostname: cowrie
+    ports:
+      - "2222:2222"  # SSH honeypot
+      - "2223:2223"  # Telnet honeypot
+    volumes:
+      - ./cowrie/data:/home/cowrie/cowrie/log/keys
+      - ./cowrie/logs:/home/cowrie/cowrie/log
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    networks:
+      - honeypot_net
+
+  # Dionaea - Multi-protocol Honeypot
+  # Using alternative ports to avoid conflicts
+  dionaea:
+    image: dinotools/dionaea:latest
+    container_name: securesight_dionaea
+    hostname: dionaea
+    ports:
+      - "2121:21"       # FTP (mapped to avoid conflict)
+      - "8080:80"       # HTTP
+      - "8443:443"      # HTTPS
+      - "10445:445"     # SMB (mapped)
+      - "11433:1433"    # MSSQL (mapped)
+      - "13306:3306"    # MySQL (mapped)
+      - "59312:49312"   # IPMI (mapped)
+    volumes:
+      - ./dionaea/binaries:/var/lib/dionaea/binaries
+      - ./dionaea/logs:/var/log/dionaea
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - honeypot_net
+
+networks:
+  honeypot_net:
+    driver: bridge
+    name: securesight_honeypots
